@@ -3,10 +3,13 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const ALLOWED_ORIGINS = new Set(["https://osa60x.github.io"]);
 const OWNER_EMAIL = "osa60x@gmail.com";
 const CARATS = new Set(["24", "21", "18"]);
+const THEMES = new Set(["emerald_classic", "obsidian_glass", "ivory_luxe"]);
+const CONTACT_KINDS = new Set(["whatsapp", "phone", "website", "map", "instagram", "snapchat", "telegram", "email"]);
 
 type Role = "owner" | "manager" | "user";
 type Identity = { id: string; email: string; role: Role; isActive: boolean; mustChangePassword: boolean };
-
+type ContactAction = { kind: "whatsapp" | "phone" | "website" | "map" | "instagram" | "snapchat" | "telegram" | "email"; label: string; value: string };
+type SiteSettings = { theme: "emerald_classic" | "obsidian_glass" | "ivory_luxe"; contact_actions: ContactAction[]; updated_at?: string };
 type SetupToken = { token_hash: string; user_id: string; expires_at: string; used_at: string | null };
 
 function keyFromEnvironment() {
@@ -93,6 +96,49 @@ async function findUserByEmail(email: string) {
   return (data.users ?? []).find(user => user.email?.toLowerCase() === email) ?? null;
 }
 
+function normalizeContactActions(value: unknown): ContactAction[] | null {
+  if (!Array.isArray(value) || value.length > 6) return null;
+  const seen = new Set<string>();
+  const actions: ContactAction[] = [];
+  for (const raw of value) {
+    const kind = String(raw?.kind ?? "");
+    const label = String(raw?.label ?? "").trim().replace(/\s+/g, " ");
+    const rawValue = String(raw?.value ?? "").trim();
+    if (!CONTACT_KINDS.has(kind) || seen.has(kind) || !label || label.length > 48 || !rawValue || rawValue.length > 300) return null;
+    let normalized = rawValue;
+    if (kind === "phone" || kind === "whatsapp") {
+      normalized = rawValue.replace(/\D/g, "");
+      if (normalized.length < 7 || normalized.length > 15) return null;
+    } else if (kind === "email") {
+      normalized = rawValue.toLowerCase();
+      if (!/^\S+@\S+\.\S+$/.test(normalized)) return null;
+    } else {
+      try {
+        const parsed = new URL(rawValue);
+        if (parsed.protocol !== "https:") return null;
+        normalized = parsed.toString();
+      } catch { return null; }
+    }
+    seen.add(kind);
+    actions.push({ kind: kind as ContactAction["kind"], label, value: normalized });
+  }
+  return actions;
+}
+
+function normalizeSiteSettings(value: unknown): SiteSettings | null {
+  const theme = String((value as { theme?: unknown } | null)?.theme ?? "");
+  const actions = normalizeContactActions((value as { contact_actions?: unknown } | null)?.contact_actions);
+  if (!THEMES.has(theme) || !actions) return null;
+  return { theme: theme as SiteSettings["theme"], contact_actions: actions };
+}
+
+async function readSiteSettings() {
+  const { data, error } = await admin.from("site_settings").select("theme,contact_actions,updated_at").eq("singleton", true).maybeSingle();
+  if (error || !data) return null;
+  const settings = normalizeSiteSettings(data);
+  return settings ? { ...settings, updated_at: data.updated_at } : null;
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors(request) });
   const url = new URL(request.url);
@@ -101,6 +147,11 @@ Deno.serve(async (request) => {
   if (request.method === "GET" && action === "public-adjustments") {
     const { data, error } = await admin.from("price_adjustments").select("carat,adjustment_sar,updated_at").order("carat", { ascending: false });
     return error ? fail(request, 503, "unavailable") : response(request, { adjustments: data ?? [] });
+  }
+
+  if (request.method === "GET" && action === "public-settings") {
+    const settings = await readSiteSettings();
+    return settings ? response(request, { settings }) : fail(request, 503, "unavailable");
   }
 
   if (request.method === "GET" && action === "owner-setup") {
@@ -137,6 +188,28 @@ Deno.serve(async (request) => {
     if (isError(identity)) return identity;
     const { data, error } = await admin.from("audit_log").select("action,entity_type,actor_role,created_at").order("created_at", { ascending: false }).limit(20);
     return error ? fail(request, 503, "unavailable") : response(request, { logs: data ?? [] });
+  }
+
+  if (request.method === "GET" && action === "site-settings") {
+    const identity = await requireAdmin(request, true);
+    if (isError(identity)) return identity;
+    const settings = await readSiteSettings();
+    return settings ? response(request, { settings }) : fail(request, 503, "unavailable");
+  }
+
+  if (request.method === "PUT" && action === "site-settings") {
+    const identity = await requireAdmin(request, true);
+    if (isError(identity)) return identity;
+    const payload = await request.json().catch(() => null);
+    const settings = normalizeSiteSettings(payload);
+    if (!settings) return fail(request, 400, "invalid_site_settings");
+    const { data, error } = await admin.from("site_settings")
+      .upsert({ singleton: true, theme: settings.theme, contact_actions: settings.contact_actions, updated_by: identity.id }, { onConflict: "singleton" })
+      .select("theme,contact_actions,updated_at").single();
+    const saved = !error ? normalizeSiteSettings(data) : null;
+    if (!saved) return fail(request, 503, "settings_save_failed");
+    await admin.from("audit_log").insert({ actor_id: identity.id, actor_role: identity.role, action: "site_settings_updated", entity_type: "site_settings", detail: { theme: saved.theme, contacts: saved.contact_actions.map(action => action.kind) } });
+    return response(request, { settings: { ...saved, updated_at: data.updated_at } });
   }
 
   if (request.method === "GET" && action === "managers") {

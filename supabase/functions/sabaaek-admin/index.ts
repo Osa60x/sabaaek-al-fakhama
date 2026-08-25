@@ -162,11 +162,15 @@ Deno.serve(async (request) => {
     const currentPassword = String(payload?.currentPassword ?? "");
     const password = String(payload?.password ?? "");
     if (!isStrongPassword(password)) return fail(request, 400, "weak_password");
-    const { error: checkError } = await admin.auth.signInWithPassword({ email: identity.email, password: currentPassword });
+    // Do not sign in through the service client: a user session there would replace
+    // its service credentials and make the following profile update subject to RLS.
+    const verifier = createClient(supabaseUrl, secretKey, { auth: { persistSession: false, autoRefreshToken: false } });
+    const { error: checkError } = await verifier.auth.signInWithPassword({ email: identity.email, password: currentPassword });
     if (checkError) return fail(request, 400, "current_password_incorrect");
     const { error: updateError } = await admin.auth.admin.updateUserById(identity.id, { password });
     if (updateError) return fail(request, 503, "password_update_failed");
-    await admin.from("profiles").update({ must_change_password: false }).eq("id", identity.id);
+    const { error: profileUpdateError } = await admin.from("profiles").update({ must_change_password: false }).eq("id", identity.id);
+    if (profileUpdateError) return fail(request, 503, "password_state_update_failed");
     await admin.from("audit_log").insert({ actor_id: identity.id, actor_role: identity.role, action: "password_changed", entity_type: "profiles", detail: {} });
     return response(request, { ok: true });
   }

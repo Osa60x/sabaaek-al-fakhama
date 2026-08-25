@@ -2,9 +2,12 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const ALLOWED_ORIGINS = new Set(["https://osa60x.github.io"]);
 const OWNER_EMAIL = "osa60x@gmail.com";
+const CARATS = new Set(["24", "21", "18"]);
 
 type Role = "owner" | "manager" | "user";
-type Identity = { id: string; email: string; role: Role; isActive: boolean };
+type Identity = { id: string; email: string; role: Role; isActive: boolean; mustChangePassword: boolean };
+
+type SetupToken = { token_hash: string; user_id: string; expires_at: string; used_at: string | null };
 
 function keyFromEnvironment() {
   try {
@@ -31,21 +34,32 @@ function response(request: Request, body: unknown, status = 200) {
 
 function fail(request: Request, status: number, code: string) { return response(request, { code }, status); }
 
+function isStrongPassword(value: string) {
+  return value.length >= 12 && /[a-z]/.test(value) && /[A-Z]/.test(value) && /\d/.test(value) && /[^A-Za-z0-9]/.test(value);
+}
+
+async function sha256(value: string) {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
 async function identityFor(request: Request): Promise<Identity | null> {
   const authorization = request.headers.get("authorization") ?? "";
   const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
   if (!token) return null;
   const { data, error } = await admin.auth.getUser(token);
   if (error || !data.user?.id || !data.user.email) return null;
-  const { data: profile } = await admin.from("profiles").select("role,is_active").eq("id", data.user.id).maybeSingle();
+  const { data: profile } = await admin.from("profiles").select("role,is_active,must_change_password").eq("id", data.user.id).maybeSingle();
   if (!profile) return null;
-  return { id: data.user.id, email: data.user.email.toLowerCase(), role: profile.role as Role, isActive: Boolean(profile.is_active) };
+  return { id: data.user.id, email: data.user.email.toLowerCase(), role: profile.role as Role, isActive: Boolean(profile.is_active), mustChangePassword: Boolean(profile.must_change_password) };
 }
 
-async function requireAdmin(request: Request, ownerOnly = false): Promise<Identity | Response> {
+async function requireAdmin(request: Request, ownerOnly = false, allowPasswordChange = false): Promise<Identity | Response> {
   const identity = await identityFor(request);
   if (!identity || !identity.isActive || (identity.role !== "owner" && identity.role !== "manager")) return fail(request, 403, "forbidden");
   if (ownerOnly && identity.role !== "owner") return fail(request, 403, "owner_required");
+  if (!allowPasswordChange && identity.mustChangePassword) return fail(request, 403, "password_change_required");
   return identity;
 }
 
@@ -58,11 +72,25 @@ function parseUpdates(value: unknown) {
   for (const item of value) {
     const carat = String(item?.carat ?? "");
     const adjustment = Number(item?.adjustment_sar);
-    if ((carat !== "24" && carat !== "21" && carat !== "18") || seen.has(carat) || !Number.isFinite(adjustment) || adjustment < -5000 || adjustment > 5000) return null;
+    if (!CARATS.has(carat) || seen.has(carat) || !Number.isFinite(adjustment) || adjustment < -5000 || adjustment > 5000) return null;
     seen.add(carat);
     normalized.push({ carat: carat as "24" | "21" | "18", adjustment_sar: Math.round(adjustment * 100) / 100 });
   }
   return seen.size === 3 ? normalized : null;
+}
+
+async function activeSetupToken(token: string) {
+  if (!token || token.length < 32) return null;
+  const hash = await sha256(token);
+  const { data } = await admin.from("password_setup_tokens").select("token_hash,user_id,expires_at,used_at").eq("token_hash", hash).maybeSingle<SetupToken>();
+  if (!data || data.used_at || new Date(data.expires_at).getTime() < Date.now()) return null;
+  return data;
+}
+
+async function findUserByEmail(email: string) {
+  const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  if (error) return null;
+  return (data.users ?? []).find(user => user.email?.toLowerCase() === email) ?? null;
 }
 
 Deno.serve(async (request) => {
@@ -73,6 +101,30 @@ Deno.serve(async (request) => {
   if (request.method === "GET" && action === "public-adjustments") {
     const { data, error } = await admin.from("price_adjustments").select("carat,adjustment_sar,updated_at").order("carat", { ascending: false });
     return error ? fail(request, 503, "unavailable") : response(request, { adjustments: data ?? [] });
+  }
+
+  if (request.method === "GET" && action === "owner-setup") {
+    const setup = await activeSetupToken(url.searchParams.get("token") ?? "");
+    if (!setup) return fail(request, 403, "invalid_setup");
+    const { data: profile } = await admin.from("profiles").select("role,is_active").eq("id", setup.user_id).maybeSingle();
+    if (!profile || profile.role !== "owner" || !profile.is_active) return fail(request, 403, "invalid_setup");
+    return response(request, { ok: true, email: OWNER_EMAIL });
+  }
+
+  if (request.method === "POST" && action === "owner-setup") {
+    const payload = await request.json().catch(() => null);
+    const setup = await activeSetupToken(String(payload?.token ?? ""));
+    const password = String(payload?.password ?? "");
+    if (!setup) return fail(request, 403, "invalid_setup");
+    if (!isStrongPassword(password)) return fail(request, 400, "weak_password");
+    const { data: profile } = await admin.from("profiles").select("role,is_active").eq("id", setup.user_id).maybeSingle();
+    if (!profile || profile.role !== "owner" || !profile.is_active) return fail(request, 403, "invalid_setup");
+    const { error: authError } = await admin.auth.admin.updateUserById(setup.user_id, { password, email_confirm: true });
+    if (authError) return fail(request, 503, "password_setup_failed");
+    await admin.from("profiles").update({ must_change_password: false }).eq("id", setup.user_id);
+    await admin.from("password_setup_tokens").update({ used_at: new Date().toISOString() }).eq("token_hash", setup.token_hash);
+    await admin.from("audit_log").insert({ actor_id: setup.user_id, actor_role: "owner", action: "owner_password_configured", entity_type: "profiles", detail: {} });
+    return response(request, { ok: true });
   }
 
   if (request.method === "GET" && action === "me") {
@@ -87,6 +139,13 @@ Deno.serve(async (request) => {
     return error ? fail(request, 503, "unavailable") : response(request, { logs: data ?? [] });
   }
 
+  if (request.method === "GET" && action === "managers") {
+    const identity = await requireAdmin(request, true);
+    if (isError(identity)) return identity;
+    const { data, error } = await admin.from("manager_invites").select("email,is_active,created_at,updated_at").order("created_at", { ascending: false }).limit(50);
+    return error ? fail(request, 503, "unavailable") : response(request, { managers: data ?? [] });
+  }
+
   if (request.method === "PUT" && action === "price-adjustments") {
     const identity = await requireAdmin(request);
     if (isError(identity)) return identity;
@@ -96,19 +155,61 @@ Deno.serve(async (request) => {
     return error ? fail(request, 400, "save_failed") : response(request, { adjustments: data ?? [] });
   }
 
-  if (request.method === "POST" && action === "invite-manager") {
+  if (request.method === "POST" && action === "change-password") {
+    const identity = await requireAdmin(request, false, true);
+    if (isError(identity)) return identity;
+    const payload = await request.json().catch(() => null);
+    const currentPassword = String(payload?.currentPassword ?? "");
+    const password = String(payload?.password ?? "");
+    if (!isStrongPassword(password)) return fail(request, 400, "weak_password");
+    const { error: checkError } = await admin.auth.signInWithPassword({ email: identity.email, password: currentPassword });
+    if (checkError) return fail(request, 400, "current_password_incorrect");
+    const { error: updateError } = await admin.auth.admin.updateUserById(identity.id, { password });
+    if (updateError) return fail(request, 503, "password_update_failed");
+    await admin.from("profiles").update({ must_change_password: false }).eq("id", identity.id);
+    await admin.from("audit_log").insert({ actor_id: identity.id, actor_role: identity.role, action: "password_changed", entity_type: "profiles", detail: {} });
+    return response(request, { ok: true });
+  }
+
+  if (request.method === "POST" && action === "create-manager") {
+    const identity = await requireAdmin(request, true);
+    if (isError(identity)) return identity;
+    const payload = await request.json().catch(() => null);
+    const email = String(payload?.email ?? "").trim().toLowerCase();
+    const password = String(payload?.password ?? "");
+    if (!/^\S+@\S+\.\S+$/.test(email) || email === OWNER_EMAIL) return fail(request, 400, "invalid_email");
+    if (!isStrongPassword(password)) return fail(request, 400, "weak_password");
+    const existingUser = await findUserByEmail(email);
+    let userId = existingUser?.id ?? "";
+    if (existingUser) {
+      const { data: existingProfile } = await admin.from("profiles").select("role").eq("id", existingUser.id).maybeSingle();
+      if (!existingProfile || existingProfile.role !== "manager") return fail(request, 409, "email_unavailable");
+      const { error } = await admin.auth.admin.updateUserById(existingUser.id, { password, email_confirm: true });
+      if (error) return fail(request, 503, "manager_setup_failed");
+    } else {
+      const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
+      if (error || !data.user?.id) return fail(request, 503, "manager_setup_failed");
+      userId = data.user.id;
+    }
+    const { error: profileError } = await admin.from("profiles").upsert({ id: userId, role: "manager", is_active: true, must_change_password: true }, { onConflict: "id" });
+    if (profileError) return fail(request, 503, "manager_profile_failed");
+    const { error: inviteError } = await admin.from("manager_invites").upsert({ email, invited_by: identity.id, is_active: true }, { onConflict: "email" });
+    if (inviteError) return fail(request, 503, "manager_record_failed");
+    await admin.from("audit_log").insert({ actor_id: identity.id, actor_role: identity.role, action: "manager_created", entity_type: "manager_invites", detail: { email } });
+    return response(request, { ok: true });
+  }
+
+  if (request.method === "POST" && action === "deactivate-manager") {
     const identity = await requireAdmin(request, true);
     if (isError(identity)) return identity;
     const email = String((await request.json().catch(() => null))?.email ?? "").trim().toLowerCase();
-    if (!/^\S+@\S+\.\S+$/.test(email) || email === OWNER_EMAIL) return fail(request, 400, "invalid_email");
-    const redirectTo = "https://osa60x.github.io/sabaaek-al-fakhama/admin.html?invite=1";
-    const { data: invitation, error: invitationError } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo });
-    if (invitationError || !invitation.user?.id) return fail(request, 400, "invite_failed");
-    const { error: profileError } = await admin.from("profiles").upsert({ id: invitation.user.id, role: "manager", is_active: true }, { onConflict: "id" });
-    if (profileError) return fail(request, 503, "invite_profile_failed");
-    const { error: inviteError } = await admin.from("manager_invites").upsert({ email, invited_by: identity.id, is_active: true }, { onConflict: "email" });
-    if (inviteError) return fail(request, 503, "invite_record_failed");
-    await admin.from("audit_log").insert({ actor_id: identity.id, actor_role: identity.role, action: "manager_invited", entity_type: "manager_invites", detail: { email } });
+    const manager = await findUserByEmail(email);
+    if (!manager) return fail(request, 404, "manager_not_found");
+    const { data: profile } = await admin.from("profiles").select("role").eq("id", manager.id).maybeSingle();
+    if (!profile || profile.role !== "manager") return fail(request, 404, "manager_not_found");
+    await admin.from("profiles").update({ is_active: false }).eq("id", manager.id);
+    await admin.from("manager_invites").update({ is_active: false }).eq("email", email);
+    await admin.from("audit_log").insert({ actor_id: identity.id, actor_role: identity.role, action: "manager_deactivated", entity_type: "manager_invites", detail: { email } });
     return response(request, { ok: true });
   }
 

@@ -1,0 +1,15 @@
+name = "sabaaek-gold-api"
+main = "src/index.js"
+compatibility_date = "2026-08-16"
+account_id = "755edaf61174648150be204e818a047e"
+
+[vars]
+ALLOWED_ORIGIN = "https://osa60x.github.io,https://osa6000.github.io"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "sabaaek_gold"
+database_id = "9d2acafd-7daf-4f82-b689-50cacfb6f000"
+
+[triggers]
+crons = ["*/5 * * * *"]

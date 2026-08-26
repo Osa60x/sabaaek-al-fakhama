@@ -15,7 +15,7 @@ VIEWPORTS = {
 }
 OUT_DIR = Path(__file__).resolve().parents[1] / "qa"
 QUOTE = {"price": 4592.70, "symbol": "XAU", "currency": "USD", "source": "gold-api.com", "sourceUpdatedAt": 1787772103000, "fetchedAt": 1787772127721, "status": "live"}
-HISTORY = {"points": [{"price": 4568.4, "ts": 1787685703000}, {"price": 4584.7, "ts": 1787710903000}, {"price": 4612.1, "ts": 1787736103000}, {"price": 4592.7, "ts": 1787772103000}]}
+HISTORY = {"range": "24h", "gap_threshold_ms": 2100000, "points": [{"price": 4568.4, "ts": 1787770903000, "high": 4568.4, "low": 4568.4}, {"price": 4584.7, "ts": 1787771203000, "high": 4584.7, "low": 4584.7}, {"price": 4612.1, "ts": 1787771503000, "high": 4612.1, "low": 4612.1}, {"price": 4592.7, "ts": 1787771803000, "high": 4592.7, "low": 4592.7}]}
 
 
 def route_price_data(route) -> None:
@@ -93,6 +93,7 @@ if __name__ == "__main__":
         assert not item["scroll"]["horizontal"], f"{name}: horizontal overflow"
         assert item["price"] != "—", f"{name}: price did not render"
         assert item["chart"]["height"] > 0, f"{name}: chart panel is missing"
+        assert item["chartPoints"] > 0, f"{name}: chart line did not render"
         assert not item["scroll"]["vertical"], f"{name}: content requires vertical scrolling"
         assert item["qrDisplay"] != "none", f"{name}: QR should remain available in landscape"
         assert len(item["karats"]) == 3, f"{name}: karat card count changed"

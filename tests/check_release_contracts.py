@@ -27,6 +27,8 @@ def main() -> int:
             "QR: لا توجد قاعدة إخفاء للوضع الطولي", failures)
     require("sabaaek-logo-user.png" in index,
             "الهوية: الرأس لا يستخدم أصل الشعار الشفاف الذي زوّده المستخدم", failures)
+    require('class="brand-logo-user"' in index and 'fetchpriority="high"' in index,
+            "الأداء: الشعار الرئيسي لا يطلب بأولوية عالية رغم كونه عنصر LCP مثبت", failures)
     require('<div class="brand"><img class="brand-logo-user"' in index and "brand-window" not in index and "brand-logo-source" not in index,
             "الهوية: ما زالت نافذة اقتصاص أو بطاقة داخلية تحيط بالشعار", failures)
     require('.topbar::after,body[data-theme="obsidian_glass"] .topbar::after{content:none!important' in index,

@@ -31,6 +31,10 @@ def main() -> int:
             "الهوية: ما زالت نافذة اقتصاص أو بطاقة داخلية تحيط بالشعار", failures)
     require('.topbar::after,body[data-theme="obsidian_glass"] .topbar::after{content:none!important' in index,
             "الهوية: ما زال تأثير بطاقة الرأس يرسم إطارًا حول الشعار", failures)
+    require("data-theme-pending" in index and "sabaaek-public-theme" in index,
+            "الثيم: لا توجد حماية بدء مبكر تمنع وميض الثيم الافتراضي", failures)
+    require("localStorage.setItem('sabaaek-public-theme',settings.theme)" in admin,
+            "الثيم: حفظ إعدادات الإدارة لا يحدّث ذاكرة الثيم للزيارة التالية", failures)
     require("prefers-reduced-motion" in index,
             "الحركة: لا توجد حماية تقليل الحركة", failures)
     require('class="skip-link" href="#prices"' in index and 'id="prices" tabindex="-1"' in index,

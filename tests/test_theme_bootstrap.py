@@ -43,7 +43,7 @@ def test_cached_theme_is_present_before_first_frame_for_every_theme() -> None:
         for theme in THEMES:
             page = browser.new_page()
             page.route("**/sabaaek-admin?action=public-settings", settings_route(theme))
-            page.add_init_script(f"localStorage.setItem('sabaaek-public-theme', '{theme}')")
+            page.add_init_script(f"localStorage.setItem('sabaaek-public-theme', JSON.stringify({{theme:'{theme}',savedAt:Date.now()}}))")
             record_first_frame(page)
             page.goto(PAGE_URL, wait_until="domcontentloaded")
             page.wait_for_function("window.__themeBootstrapFirstFrame !== null")
@@ -74,7 +74,22 @@ def test_cold_start_stays_gated_until_remote_theme_arrives_for_every_theme() -> 
         browser.close()
 
 
+def test_legacy_theme_cache_is_gated_when_remote_theme_differs() -> None:
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True, executable_path="/usr/bin/chromium")
+        page = browser.new_page()
+        page.route("**/sabaaek-admin?action=public-settings", settings_route("obsidian_glass"))
+        page.add_init_script("localStorage.setItem('sabaaek-public-theme', 'emerald_classic')")
+        record_first_frame(page)
+        page.goto(PAGE_URL, wait_until="domcontentloaded")
+        page.wait_for_function("window.__themeBootstrapFirstFrame !== null")
+        assert page.evaluate("window.__themeBootstrapFirstFrame") == {"theme": "", "pending": True}
+        page.wait_for_function("document.body.dataset.theme === 'obsidian_glass' && !document.documentElement.hasAttribute('data-theme-pending')")
+        browser.close()
+
+
 if __name__ == "__main__":
     test_cached_theme_is_present_before_first_frame_for_every_theme()
     test_cold_start_stays_gated_until_remote_theme_arrives_for_every_theme()
+    test_legacy_theme_cache_is_gated_when_remote_theme_differs()
     print("THEME_BOOTSTRAP_TESTS_PASSED")

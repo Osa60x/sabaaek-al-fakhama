@@ -34,11 +34,17 @@ def main() -> int:
     require('.topbar::after,body[data-theme="obsidian_glass"] .topbar::after{content:none!important' in index,
             "الهوية: ما زال تأثير بطاقة الرأس يرسم إطارًا حول الشعار", failures)
     require('filter:brightness(.98) saturate(.90) contrast(1.04) drop-shadow' in index,
-            "الهوية: لا يوجد ضبط محافظ لحدة لون الشعار وتباينه", failures)
-    require("data-theme-pending" in index and "sabaaek-public-theme" in index,
-            "الثيم: لا توجد حماية بدء مبكر تمنع وميض الثيم الافتراضي", failures)
-    require("localStorage.setItem('sabaaek-public-theme',settings.theme)" in admin,
-            "الثيم: حفظ إعدادات الإدارة لا يحدّث ذاكرة الثيم للزيارة التالية", failures)
+            "الهوية: لا يوجد ضبط محافظ لحدة لون الشعار وتباينه في الثيم الأسود", failures)
+    require('body[data-theme="emerald_classic"] .brand-logo-user{filter:brightness(.97) saturate(.88) contrast(1.05)' in index,
+            "الهوية: لا يوجد ضبط هادئ للشعار يتناسب مع الثيم الزمردي", failures)
+    require('body[data-theme="ivory_luxe"] .brand-logo-user{filter:brightness(.96) saturate(.84) contrast(1.08)' in index,
+            "الهوية: لا يوجد ضبط واضح للشعار يتناسب مع الثيم العاجي", failures)
+    require("data-theme-pending" in index and "sabaaek-public-theme" in index and "maxAge=5*60*1000" in index and "themeStale" in index,
+            "الثيم: لا توجد حماية بدء مبكر تمنع رسم ذاكرة ثيم قديمة", failures)
+    require("localStorage.setItem(THEME_KEY,JSON.stringify({theme:current,savedAt:Date.now()}))" in index,
+            "الثيم: الصفحة العامة لا تحدّث ذاكرة الثيم المؤرخة بعد قراءة الإعداد الصحيح", failures)
+    require("localStorage.setItem('sabaaek-public-theme',JSON.stringify({theme:settings.theme,savedAt:Date.now()}))" in admin,
+            "الثيم: حفظ إعدادات الإدارة لا يحدّث ذاكرة الثيم المؤرخة للزيارة التالية", failures)
     require("prefers-reduced-motion" in index,
             "الحركة: لا توجد حماية تقليل الحركة", failures)
     require('class="skip-link" href="#prices"' in index and 'id="prices" tabindex="-1"' in index,

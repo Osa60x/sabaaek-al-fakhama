@@ -37,10 +37,18 @@ def main() -> int:
     # Admin accessibility contracts: these intentionally fail before the B improvement.
     require('id="login-error-summary" class="error-summary" role="alert" tabindex="-1" hidden' in admin,
             "الإدارة: لا يوجد ملخص أخطاء متاح لقارئات الشاشة", failures)
-    require('id="email" type="email" autocomplete="email" required aria-describedby="email-error"' in admin,
+    require('id="email"' in admin and 'aria-describedby="email-error"' in admin,
             "الإدارة: حقل البريد لا يرتبط برسالة خطأ محلية", failures)
-    require('id="password" type="password" autocomplete="current-password" required aria-describedby="password-error"' in admin,
+    require('id="password"' in admin and 'aria-describedby="password-error"' in admin,
             "الإدارة: حقل كلمة المرور لا يرتبط برسالة خطأ محلية", failures)
+    require('id="email" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false"' in admin,
+            "الإدارة: حقل البريد يفتقد بيانات الإدخال المناسبة للهاتف ومدير كلمات المرور", failures)
+    require('id="password" name="password" type="password" autocomplete="current-password" autocapitalize="none" spellcheck="false"' in admin,
+            "الإدارة: حقل كلمة المرور يفتقد بيانات الإدخال المناسبة للهاتف ومدير كلمات المرور", failures)
+    require("font:16px/1.5 Kufi,system-ui,sans-serif" in admin,
+            "الإدارة: حجم نص حقول الإدخال أقل من خط القراءة المريح على الهاتف", failures)
+    require("function refreshLoginField" in admin and "addEventListener('input',()=>refreshLoginField('email'))" in admin and "addEventListener('input',()=>refreshLoginField('password'))" in admin,
+            "الإدارة: لا تُحدَّث رسائل أخطاء الدخول عند تصحيح الحقول", failures)
     require("input,select{width:100%;min-height:44px" in admin,
             "الإدارة: حقول الإدخال لا تلتزم بحد لمس 44px", failures)
     require("button{border:0;border-radius:11px;min-height:44px" in admin,

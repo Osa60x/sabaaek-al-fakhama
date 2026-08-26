@@ -31,6 +31,8 @@ def main() -> int:
             "الهوية: ما زالت نافذة اقتصاص أو بطاقة داخلية تحيط بالشعار", failures)
     require('.topbar::after,body[data-theme="obsidian_glass"] .topbar::after{content:none!important' in index,
             "الهوية: ما زال تأثير بطاقة الرأس يرسم إطارًا حول الشعار", failures)
+    require('filter:brightness(.98) saturate(.90) contrast(1.04) drop-shadow' in index,
+            "الهوية: لا يوجد ضبط محافظ لحدة لون الشعار وتباينه", failures)
     require("data-theme-pending" in index and "sabaaek-public-theme" in index,
             "الثيم: لا توجد حماية بدء مبكر تمنع وميض الثيم الافتراضي", failures)
     require("localStorage.setItem('sabaaek-public-theme',settings.theme)" in admin,

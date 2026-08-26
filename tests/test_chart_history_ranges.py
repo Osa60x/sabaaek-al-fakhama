@@ -29,6 +29,12 @@ DAILY_POINTS = [
     {"ts": NOW - 24 * 60 * 60 * 1000, "price": 4628.0, "high": 4638.0, "low": 4602.0},
     {"ts": NOW, "price": 4620.0, "high": 4631.0, "low": 4610.0},
 ]
+GAPPED_RAW_POINTS = [
+    {"ts": NOW - 3 * 60 * 60 * 1000, "price": 4600.0},
+    {"ts": NOW - 175 * 60 * 1000, "price": 4612.0},
+    {"ts": NOW - 85 * 60 * 1000, "price": 4598.0},
+    {"ts": NOW - 80 * 60 * 1000, "price": 4605.0},
+]
 MONTHLY_POINTS = [
     {"ts": NOW - 120 * 24 * 60 * 60 * 1000, "price": 4400.0, "high": 4450.0, "low": 4310.0},
     {"ts": NOW - 90 * 24 * 60 * 60 * 1000, "price": 4510.0, "high": 4555.0, "low": 4380.0},
@@ -42,7 +48,9 @@ def fulfill_json(route: Route, payload: dict) -> None:
     route.fulfill(status=200, content_type="application/json", body=json.dumps(payload))
 
 
-def install_api_mocks(page, requested_ranges: list[str]) -> None:
+def install_api_mocks(page, requested_ranges: list[str], points_by_range: dict[str, list[dict]] | None = None) -> None:
+    data = points_by_range or {"24h": RAW_POINTS, "30d": DAILY_POINTS, "1y": MONTHLY_POINTS}
+
     def worker(route: Route) -> None:
         parsed = urlparse(route.request.url)
         if parsed.path.endswith("/quote"):
@@ -61,7 +69,7 @@ def install_api_mocks(page, requested_ranges: list[str]) -> None:
             return
         selected = parse_qs(parsed.query).get("range", [""])[0]
         requested_ranges.append(selected)
-        points = {"24h": RAW_POINTS, "30d": DAILY_POINTS, "1y": MONTHLY_POINTS}.get(selected, [])
+        points = data.get(selected, [])
         fulfill_json(
             route,
             {
@@ -107,6 +115,21 @@ def test_range_controls_render_and_request_aggregate_ranges() -> None:
         browser.close()
 
 
+def test_24h_gap_is_drawn_as_visible_dashed_bridge() -> None:
+    requested_ranges: list[str] = []
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True, executable_path="/usr/bin/chromium")
+        page = browser.new_page(viewport={"width": 1024, "height": 768})
+        install_api_mocks(page, requested_ranges, {"24h": GAPPED_RAW_POINTS, "30d": DAILY_POINTS, "1y": MONTHLY_POINTS})
+        page.add_init_script("localStorage.setItem('sabaaek-public-theme', JSON.stringify({theme:'obsidian_glass', savedAt:Date.now()}));")
+        page.goto(SITE_URL, wait_until="domcontentloaded")
+        page.wait_for_function("document.querySelectorAll('#chart-lines polyline').length === 2")
+        bridges = page.locator("#chart-lines .gap-bridge")
+        assert bridges.count() == 1
+        assert bridges.first.get_attribute("stroke-dasharray") == "2.2 1.8"
+        browser.close()
+
+
 def test_history_worker_contract_supports_raw_daily_and_monthly_storage() -> None:
     source = WORKER_SOURCE.read_text(encoding="utf-8")
     for token in (
@@ -124,5 +147,6 @@ def test_history_worker_contract_supports_raw_daily_and_monthly_storage() -> Non
 
 if __name__ == "__main__":
     test_range_controls_render_and_request_aggregate_ranges()
+    test_24h_gap_is_drawn_as_visible_dashed_bridge()
     test_history_worker_contract_supports_raw_daily_and_monthly_storage()
     print("CHART_HISTORY_RANGE_TESTS_PASSED")

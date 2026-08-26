@@ -68,6 +68,33 @@
     @media(max-width:760px){.brand-logo-user,body[data-theme="obsidian_glass"] .brand-logo-user{width:min(94%,355px);max-height:none}}
     @media(min-width:761px) and (max-height:900px){body[data-theme="obsidian_glass"] .topbar{min-height:148px}.brand-logo-user,body[data-theme="obsidian_glass"] .brand-logo-user{width:min(94%,540px);max-height:112px}}
     @media(min-width:761px) and (max-height:740px){body[data-theme="obsidian_glass"] .topbar{min-height:128px}.brand-logo-user,body[data-theme="obsidian_glass"] .brand-logo-user{width:min(94%,430px);max-height:88px}}
+    /* Compact landscape keeps the two dashboard columns and all three karat cards inside tablet screens. */
+    @media (min-width:761px) and (max-width:1199px) and (orientation:landscape){
+      .page,body[data-theme="obsidian_glass"] .page{max-width:none;padding:8px 12px 10px}
+      .shell{max-width:none}
+      .dashboard,body[data-theme="obsidian_glass"] .dashboard{grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr);gap:12px;padding:8px 12px 10px}
+      .summary{min-width:0;gap:8px}
+      .chart-panel,.quote,.karats,.meta-bar{min-width:0}
+      .karats{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+      .karat{min-width:0}
+      .karat-price{font-size:clamp(26px,4.4vw,34px)}
+      .footer,body[data-theme="obsidian_glass"] .footer{margin-inline:0;padding:8px 14px 10px}
+    }
+    /* Landscape screens keep the complete composition within the available height. */
+    @media (min-width:761px) and (orientation:landscape){
+      .page,body[data-theme="obsidian_glass"] .page{padding-bottom:0}
+    }
+    @media (min-width:761px) and (max-height:900px) and (orientation:landscape){
+      .footer,body[data-theme="obsidian_glass"] .footer{padding:4px 14px}
+    }
+    /* Use the viewing area on large television panels while keeping one coherent composition. */
+    @media (min-width:2200px){
+      .page,body[data-theme="obsidian_glass"] .page{max-width:2680px;padding-inline:clamp(48px,3vw,110px)}
+      .shell{max-width:2680px}
+      .dashboard,body[data-theme="obsidian_glass"] .dashboard{gap:28px;padding:18px 30px 22px}
+      .brand-logo-user,body[data-theme="obsidian_glass"] .brand-logo-user{width:min(100%,560px)}
+      .footer,body[data-theme="obsidian_glass"] .footer{margin-inline:0}
+    }
   </style>
 <script>(()=>{const key='sabaaek-public-theme',allowed=['emerald_classic','obsidian_glass','ivory_luxe'];let theme='';try{theme=localStorage.getItem(key)||''}catch{}if(allowed.includes(theme)){document.documentElement.dataset.themeBootstrap=theme;const color={emerald_classic:'#071312',obsidian_glass:'#08090d',ivory_luxe:'#f5eedf'}[theme];document.querySelector('meta[name="theme-color"]')?.setAttribute('content',color)}else document.documentElement.setAttribute('data-theme-pending','')})()</script>
 </head>

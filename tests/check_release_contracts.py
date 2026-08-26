@@ -25,8 +25,12 @@ def main() -> int:
             "العزل: وُجد مرجع لمشروع فخامة الأسطورة في الصفحة العامة", failures)
     require("@media(orientation:portrait){.site-qr{display:none}}" in index,
             "QR: لا توجد قاعدة إخفاء للوضع الطولي", failures)
-    require("sabaaek-logo-transparent.webp" in index,
-            "الهوية: بطاقة الرأس لا تستخدم الشعار الشفاف", failures)
+    require("sabaaek-logo-user.png" in index,
+            "الهوية: الرأس لا يستخدم أصل الشعار الشفاف الذي زوّده المستخدم", failures)
+    require('<div class="brand"><img class="brand-logo-user"' in index and "brand-window" not in index and "brand-logo-source" not in index,
+            "الهوية: ما زالت نافذة اقتصاص أو بطاقة داخلية تحيط بالشعار", failures)
+    require('.topbar::after,body[data-theme="obsidian_glass"] .topbar::after{content:none!important' in index,
+            "الهوية: ما زال تأثير بطاقة الرأس يرسم إطارًا حول الشعار", failures)
     require("prefers-reduced-motion" in index,
             "الحركة: لا توجد حماية تقليل الحركة", failures)
     require('class="skip-link" href="#prices"' in index and 'id="prices" tabindex="-1"' in index,
@@ -65,8 +69,8 @@ def main() -> int:
         with urllib.request.urlopen(request, timeout=20) as response:
             live = response.read().decode("utf-8", errors="replace")
             require(response.status == 200, "النشر: الصفحة العامة لم تعد HTTP 200", failures)
-            require("sabaaek-logo-transparent.webp" in live,
-                    "النشر: النسخة الحية لا تحتوي مرجع الشعار الشفاف", failures)
+            require("sabaaek-logo-user.png" in live or "sabaaek-logo-transparent.webp" in live,
+                    "النشر: النسخة الحية لا تحتوي مرجع أصل شعار شفاف", failures)
     except Exception as error:
         failures.append(f"النشر: تعذر قراءة الصفحة الحية ({type(error).__name__})")
 

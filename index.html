@@ -58,21 +58,22 @@
     @media(min-width:761px) and (max-height:900px){body[data-theme="obsidian_glass"] .page{padding-top:9px}body[data-theme="obsidian_glass"] .topbar{min-height:136px;margin-bottom:9px;padding:8px 16px}body[data-theme="obsidian_glass"] .brand-card{padding:7px 16px}body[data-theme="obsidian_glass"] .brand-logo{max-height:101px}body[data-theme="obsidian_glass"] .dashboard{padding-top:7px;padding-bottom:8px}body[data-theme="obsidian_glass"] .karat{min-height:124px}body[data-theme="obsidian_glass"] .business-panel{margin-bottom:7px}}
     @media(min-width:761px) and (max-height:740px){body[data-theme="obsidian_glass"] .topbar{min-height:118px;padding:7px 14px}body[data-theme="obsidian_glass"] .brand-card{padding:5px 14px}body[data-theme="obsidian_glass"] .brand-logo{max-height:88px}body[data-theme="obsidian_glass"] .dashboard{padding-top:5px}body[data-theme="obsidian_glass"] .business-panel{margin-bottom:5px}}
 
-    /* Full original wordmark inside a clipped glass window: numbers are outside the view, lettering remains untouched. */
-    .brand-window{width:min(100%,620px);aspect-ratio:3.2;overflow:hidden;border-radius:15px;background:linear-gradient(126deg,rgba(255,255,255,.07),rgba(15,18,22,.16) 48%,rgba(255,255,255,.025));box-shadow:inset 0 1px rgba(255,255,255,.23),inset 0 -10px 22px rgba(0,0,0,.32)}
-    .brand-logo-source{display:block;width:100%;height:auto;transform:translateY(-19.3%);filter:contrast(1.04) saturate(1.04)}
-    body[data-theme="obsidian_glass"] .brand-card{width:min(96%,745px);padding:8px 12px;border:1px solid rgba(224,229,231,.55);border-radius:19px;background:linear-gradient(118deg,rgba(255,255,255,.13),rgba(34,39,47,.38) 39%,rgba(8,10,14,.86));box-shadow:0 16px 40px rgba(0,0,0,.38),inset 0 1px rgba(255,255,255,.78),inset 0 -2px rgba(0,0,0,.78);backdrop-filter:blur(19px)}
-    body[data-theme="obsidian_glass"] .brand-window{width:min(100%,600px);border:1px solid rgba(236,239,241,.35);background:linear-gradient(126deg,rgba(255,255,255,.1),rgba(23,28,33,.16) 52%,rgba(255,255,255,.025));box-shadow:inset 0 1px rgba(255,255,255,.38),inset 0 -12px 24px rgba(0,0,0,.42)}
-    @media(max-width:760px){.brand-window,body[data-theme="obsidian_glass"] .brand-window{width:min(100%,350px);border-radius:12px}.brand-logo-source{transform:translateY(-19.3%)}body[data-theme="obsidian_glass"] .brand-card{padding:7px 9px}}
-    @media(min-width:761px) and (max-height:900px){body[data-theme="obsidian_glass"] .topbar{min-height:148px}body[data-theme="obsidian_glass"] .brand-card{width:min(96%,440px);padding:5px 8px}body[data-theme="obsidian_glass"] .brand-window{width:min(100%,390px);border-radius:11px}}
-    @media(min-width:761px) and (max-height:740px){body[data-theme="obsidian_glass"] .topbar{min-height:128px}body[data-theme="obsidian_glass"] .brand-card{width:min(96%,355px);padding:4px 7px}body[data-theme="obsidian_glass"] .brand-window{width:min(100%,320px);border-radius:9px}}
+    /* User-provided transparent wordmark: shown directly with no surrounding glass card or crop. */
+    .topbar,body[data-theme="obsidian_glass"] .topbar{min-height:0!important;margin:0 auto 12px!important;padding:0 0 10px!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;backdrop-filter:none!important}
+    .topbar::after,body[data-theme="obsidian_glass"] .topbar::after{content:none!important;border:0!important;background:none!important;box-shadow:none!important}
+    .brand{width:100%;display:grid;place-items:center}
+    .brand-logo-user{display:block;width:min(94%,940px);height:auto;max-height:188px;object-fit:contain;filter:drop-shadow(0 7px 14px rgba(0,0,0,.64))}
+    body[data-theme="obsidian_glass"] .brand-logo-user{filter:drop-shadow(0 7px 14px rgba(0,0,0,.74))}
+    @media(max-width:760px){.brand-logo-user,body[data-theme="obsidian_glass"] .brand-logo-user{width:min(94%,355px);max-height:none}}
+    @media(min-width:761px) and (max-height:900px){body[data-theme="obsidian_glass"] .topbar{min-height:148px}.brand-logo-user,body[data-theme="obsidian_glass"] .brand-logo-user{width:min(94%,540px);max-height:112px}}
+    @media(min-width:761px) and (max-height:740px){body[data-theme="obsidian_glass"] .topbar{min-height:128px}.brand-logo-user,body[data-theme="obsidian_glass"] .brand-logo-user{width:min(94%,430px);max-height:88px}}
   </style>
 </head>
 <body>
   <a class="skip-link" href="#prices">تخطَّ إلى الأسعار</a>
   <main class="page"><section class="shell" aria-label="لوحة أسعار سبائك الفخامة">
     <header class="topbar">
-      <div class="brand"><div class="brand-card"><div class="brand-window"><img class="brand-logo-source" src="assets/sabaaek-logo-transparent.webp" width="1389" height="768" alt="سبائك الفخامة للذهب والمجوهرات"/></div><h1 class="sr-only">سبائك الفخامة للذهب والمجوهرات</h1></div></div>
+      <div class="brand"><img class="brand-logo-user" src="assets/sabaaek-logo-user.png" width="1983" height="793" alt="سبائك الفخامة للذهب والمجوهرات"/><h1 class="sr-only">سبائك الفخامة للذهب والمجوهرات</h1></div>
     </header>
     <div class="dashboard">
       <section class="summary" id="prices" tabindex="-1">

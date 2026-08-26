@@ -83,7 +83,7 @@ if __name__ == "__main__":
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True, executable_path="/usr/bin/chromium")
         context = browser.new_context()
-        context.add_init_script("localStorage.setItem('sabaaek-public-theme','obsidian_glass')")
+        context.add_init_script("localStorage.setItem('sabaaek-public-theme', JSON.stringify({theme:'obsidian_glass', savedAt:Date.now()}))")
         context.route("**/*", route_price_data)
         page = context.new_page()
         report = {name:audit(page, name, *size) for name,size in VIEWPORTS.items()}

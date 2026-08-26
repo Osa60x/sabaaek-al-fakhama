@@ -26,7 +26,8 @@ def delayed_settings(theme: str):
 
 def install_first_frame_probe(page: Page, cached_theme: str | None) -> None:
     cached_assignment = (
-        f"localStorage.setItem('sabaaek-public-theme', '{cached_theme}');"
+        "localStorage.setItem('sabaaek-public-theme', JSON.stringify({"
+        f"theme: '{cached_theme}', savedAt: Date.now()}}));"
         if cached_theme
         else "localStorage.removeItem('sabaaek-public-theme');"
     )

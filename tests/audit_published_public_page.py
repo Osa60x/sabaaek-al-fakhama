@@ -5,7 +5,7 @@ from typing import Any
 
 from playwright.sync_api import sync_playwright
 
-SITE_URL = "https://osa60x.github.io/sabaaek-al-fakhama/?locale=ar&theme-preview=obsidian_glass&v=ea1f34c"
+SITE_URL = "https://osa60x.github.io/sabaaek-al-fakhama/?locale=ar&theme-preview=obsidian_glass&v=3af845e"
 
 
 def inspect_viewport(playwright, width: int, height: int) -> dict[str, Any]:
@@ -13,7 +13,7 @@ def inspect_viewport(playwright, width: int, height: int) -> dict[str, Any]:
     context = browser.new_context(viewport={"width": width, "height": height})
     context.add_init_script(
         """
-        localStorage.setItem('sabaaek-public-theme','obsidian_glass');
+        localStorage.setItem('sabaaek-public-theme', JSON.stringify({theme:'obsidian_glass', savedAt:Date.now()}));
         window.__startupAudit = {firstFrame: null, lcp: null};
         new PerformanceObserver(list => {
           const entries = list.getEntries();

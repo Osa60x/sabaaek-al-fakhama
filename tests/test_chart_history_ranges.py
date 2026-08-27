@@ -143,6 +143,22 @@ def test_chart_exposes_readable_price_and_time_guides_without_hover() -> None:
         browser.close()
 
 
+def test_year_range_renders_truthful_empty_state_with_one_monthly_point() -> None:
+    requested_ranges: list[str] = []
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True, executable_path="/usr/bin/chromium")
+        page = browser.new_page(viewport={"width": 1024, "height": 768})
+        install_api_mocks(page, requested_ranges, {"24h": RAW_POINTS, "30d": DAILY_POINTS, "1y": MONTHLY_POINTS[:1]})
+        page.add_init_script("localStorage.setItem('sabaaek-public-theme', JSON.stringify({theme:'obsidian_glass', savedAt:Date.now()}));")
+        page.goto(SITE_URL, wait_until="domcontentloaded")
+        page.locator("#chart-ranges button[data-range='1y']").click()
+        page.wait_for_function("document.querySelector('#chart-title').textContent.includes('سنة')")
+        page.wait_for_function("document.querySelector('#chart-source').textContent.includes('ملخصات شهرية محفوظة')")
+        assert "لن تُعرض بيانات تقديرية أو مصطنعة" in page.locator("#chart-empty").inner_text()
+        assert page.locator("#chart-last-price").is_hidden()
+        browser.close()
+
+
 def test_24h_gap_is_drawn_as_visible_dashed_bridge() -> None:
     requested_ranges: list[str] = []
     with sync_playwright() as playwright:
@@ -176,6 +192,7 @@ def test_history_worker_contract_supports_raw_daily_and_monthly_storage() -> Non
 if __name__ == "__main__":
     test_range_controls_render_and_request_aggregate_ranges()
     test_chart_exposes_readable_price_and_time_guides_without_hover()
+    test_year_range_renders_truthful_empty_state_with_one_monthly_point()
     test_24h_gap_is_drawn_as_visible_dashed_bridge()
     test_history_worker_contract_supports_raw_daily_and_monthly_storage()
     print("CHART_HISTORY_RANGE_TESTS_PASSED")

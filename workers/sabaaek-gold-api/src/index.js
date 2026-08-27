@@ -6,6 +6,7 @@ const RIYADH_OFFSET = 3 * HOUR;
 const RAW_RETENTION_MS = 36 * HOUR;
 const DAILY_RETENTION_MS = 400 * DAY;
 const memoryCache = { quote: null, until: 0 };
+const QUOTE_READ_FRESH_MS = 5 * MINUTE + 30 * 1000;
 
 const HISTORY_RANGES = {
   "24h": {
@@ -57,6 +58,27 @@ function json(request, env, body, init = {}) {
       ...(init.headers || {}),
     },
   });
+}
+
+function edgeCacheKey(request) {
+  const url = new URL(request.url);
+  url.searchParams.set("__sabaaek_origin", request.headers.get("Origin") || "none");
+  return new Request(url.toString(), { method: "GET" });
+}
+
+async function cachedEndpoint(request, env, ttlSeconds, createResponse, ctx) {
+  const cache = caches.default;
+  const key = edgeCacheKey(request);
+  const cached = await cache.match(key);
+  if (cached) return cached;
+
+  const response = await createResponse();
+  if (!response.ok) return response;
+  const headers = new Headers(response.headers);
+  headers.set("Cache-Control", `public, max-age=${ttlSeconds}, stale-while-revalidate=${ttlSeconds}`);
+  const cacheable = new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+  ctx.waitUntil(cache.put(key, cacheable.clone()));
+  return cacheable;
 }
 
 function dayStart(ts) {
@@ -168,6 +190,11 @@ async function quote(env) {
     return { ...memoryCache.quote, status: "cached" };
   }
   const previous = await readLatest(env);
+  if (previous && Date.now() - previous.fetchedAt <= QUOTE_READ_FRESH_MS) {
+    memoryCache.quote = previous;
+    memoryCache.until = Date.now() + 25 * 1000;
+    return previous;
+  }
   try {
     const fresh = await recordQuote(env, previous);
     memoryCache.quote = fresh;
@@ -233,12 +260,12 @@ async function history(env, requestedRange) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     if (request.method === "OPTIONS") return new Response(null, { headers: cors(request, env) });
     const url = new URL(request.url);
     try {
-      if (url.pathname === "/quote") return json(request, env, await quote(env));
-      if (url.pathname === "/history") return json(request, env, await history(env, url.searchParams.get("range") || "24h"));
+      if (url.pathname === "/quote") return cachedEndpoint(request, env, 12, () => quote(env).then((value) => json(request, env, value)), ctx);
+      if (url.pathname === "/history") return cachedEndpoint(request, env, 20, () => history(env, url.searchParams.get("range") || "24h").then((value) => json(request, env, value)), ctx);
       return json(request, env, { error: "not_found" }, { status: 404 });
     } catch {
       const cached = await readLatest(env);

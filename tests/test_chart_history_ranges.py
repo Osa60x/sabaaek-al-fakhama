@@ -115,6 +115,34 @@ def test_range_controls_render_and_request_aggregate_ranges() -> None:
         browser.close()
 
 
+def test_chart_exposes_readable_price_and_time_guides_without_hover() -> None:
+    requested_ranges: list[str] = []
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True, executable_path="/usr/bin/chromium")
+        page = browser.new_page(viewport={"width": 1024, "height": 768})
+        install_api_mocks(page, requested_ranges)
+        page.add_init_script("localStorage.setItem('sabaaek-public-theme', JSON.stringify({theme:'obsidian_glass', savedAt:Date.now()}));")
+        page.goto(SITE_URL, wait_until="domcontentloaded")
+        page.wait_for_function("document.querySelectorAll('#chart-y-axis .chart-price-tick').length >= 4")
+
+        price_ticks = page.locator("#chart-y-axis .chart-price-tick")
+        time_ticks = page.locator("#chart-x-axis .chart-time-tick")
+        assert 4 <= price_ticks.count() <= 6
+        assert 3 <= time_ticks.count() <= 4
+        assert page.locator("#chart-guide-lines .chart-horizontal-guide").count() == price_ticks.count()
+        vertical_guides = page.locator("#chart-guide-lines .chart-vertical-guide")
+        assert vertical_guides.count() >= time_ticks.count()
+        assert vertical_guides.first.evaluate("node => getComputedStyle(node).strokeDasharray") == "none"
+        last_price = page.locator("#chart-last-price")
+        assert "4,620.00" in last_price.inner_text()
+        assert last_price.locator("bdi[dir='ltr']").count() == 1
+
+        page.locator("#chart-ranges button[data-range='30d']").click()
+        page.wait_for_function("document.querySelector('#chart-title').textContent.includes('شهر')")
+        assert page.locator("#chart-y-axis .chart-price-tick").count() >= 4
+        browser.close()
+
+
 def test_24h_gap_is_drawn_as_visible_dashed_bridge() -> None:
     requested_ranges: list[str] = []
     with sync_playwright() as playwright:
@@ -147,6 +175,7 @@ def test_history_worker_contract_supports_raw_daily_and_monthly_storage() -> Non
 
 if __name__ == "__main__":
     test_range_controls_render_and_request_aggregate_ranges()
+    test_chart_exposes_readable_price_and_time_guides_without_hover()
     test_24h_gap_is_drawn_as_visible_dashed_bridge()
     test_history_worker_contract_supports_raw_daily_and_monthly_storage()
     print("CHART_HISTORY_RANGE_TESTS_PASSED")

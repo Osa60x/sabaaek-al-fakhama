@@ -97,7 +97,12 @@
       .brand-logo-user,body[data-theme="obsidian_glass"] .brand-logo-user{width:min(100%,560px)}
       .footer,body[data-theme="obsidian_glass"] .footer{margin-inline:0}
     }
-  </style>
+
+    @media (min-width:761px) and (orientation:portrait){
+      .dashboard,body[data-theme="obsidian_glass"] .dashboard{grid-template-columns:minmax(0,1fr);gap:14px;padding:12px 18px 18px}
+      .summary,.chart-panel,.quote,.karats,.meta-bar{min-width:0}
+    }
+</style>
 <script>(()=>{const key='sabaaek-public-theme',allowed=['emerald_classic','obsidian_glass','ivory_luxe'],maxAge=5*60*1000;let theme='',stale='';try{const cached=JSON.parse(localStorage.getItem(key)||'null'),candidate=String(cached?.theme||''),savedAt=Number(cached?.savedAt)||0;if(allowed.includes(candidate)){if(Date.now()-savedAt>=0&&Date.now()-savedAt<=maxAge)theme=candidate;else stale=candidate}}catch{}if(theme){document.documentElement.dataset.themeBootstrap=theme;const color={emerald_classic:'#071312',obsidian_glass:'#08090d',ivory_luxe:'#f5eedf'}[theme];document.querySelector('meta[name="theme-color"]')?.setAttribute('content',color)}else{if(stale)document.documentElement.dataset.themeStale=stale;document.documentElement.setAttribute('data-theme-pending','')}})()</script>
 </head>
 <body><script>(()=>{const theme=document.documentElement.dataset.themeBootstrap;if(theme)document.body.dataset.theme=theme})()</script>

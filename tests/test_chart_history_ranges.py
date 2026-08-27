@@ -153,7 +153,7 @@ def test_year_range_renders_truthful_empty_state_with_one_monthly_point() -> Non
         page.goto(SITE_URL, wait_until="domcontentloaded")
         page.locator("#chart-ranges button[data-range='1y']").click()
         page.wait_for_function("document.querySelector('#chart-title').textContent.includes('سنة')")
-        page.wait_for_function("document.querySelector('#chart-source').textContent.includes('ملخصات شهرية محفوظة')")
+        page.wait_for_function("document.querySelector('#chart-source').textContent.includes('ملخص شهري محفوظ')")
         assert "لن تُعرض بيانات تقديرية أو مصطنعة" in page.locator("#chart-empty").inner_text()
         assert page.locator("#chart-last-price").is_hidden()
         browser.close()

@@ -1,0 +1,11 @@
+name = "sabaaek-site-staging"
+main = "src/index.js"
+compatibility_date = "2026-08-16"
+compatibility_flags = ["global_fetch_strictly_public"]
+
+[assets]
+directory = "./public"
+not_found_handling = "single-page-application"
+
+[vars]
+UPSTREAM_PUBLIC_API = "https://sabaaek-gold-api.osa60x.workers.dev"

@@ -12,6 +12,7 @@ def test_staging_frontend_has_no_direct_external_backend_dependencies():
     assert "gold-api.com" not in text
     assert "PRIMARY_API" not in text
     assert "ADJUSTMENT_API" not in text
+    assert "sabaaek-gold-api.osa60x.workers.dev" not in text
     assert "/public-settings" in text
     assert "/public-adjustments" in text
 

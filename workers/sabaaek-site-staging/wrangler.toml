@@ -11,4 +11,7 @@ run_worker_first = true
 
 [vars]
 UPSTREAM_PUBLIC_API = "https://sabaaek-gold-api.osa60x.workers.dev"
-UPSTREAM_PUBLIC_CONFIG_API = "https://onlptehmvnzzbxswkcrh.supabase.co/functions/v1/sabaaek-admin"
+[[d1_databases]]
+binding = "DB"
+database_name = "sabaaek_gold_staging"
+database_id = "d5345360-d46f-46cf-836c-9ed3c3ec92b9"

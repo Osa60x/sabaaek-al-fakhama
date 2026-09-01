@@ -18,7 +18,8 @@ def test_staging_files_exist_and_are_not_production_bindings():
     assert 'name = "sabaaek-site-staging"' in config
     assert 'compatibility_flags = ["global_fetch_strictly_public"]' in config
     assert 'name = "sabaaek-gold-api"' not in config
-    assert "sabaaek_gold" not in config
+    assert 'database_name = "sabaaek_gold"' not in config
+    assert 'database_name = "sabaaek_gold_staging"' in config
     assert "9d2acafd-7daf-4f82-b689-50cacfb6f000" not in config
     assert "gold.osa60x.workers.dev" not in config
     assert "rsrtwubjdfdnflkttwwy" not in config

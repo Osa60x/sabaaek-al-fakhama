@@ -17,16 +17,19 @@ def test_staging_frontend_has_no_direct_external_backend_dependencies():
     assert "/public-adjustments" in text
 
 
-def test_staging_worker_proxies_public_config_without_write_routes():
+def test_staging_worker_reads_public_config_from_d1_without_write_routes():
     text = WORKER.read_text(encoding="utf-8")
     config = WRANGLER.read_text(encoding="utf-8")
     assert "public-settings" in text
     assert "public-adjustments" in text
-    assert "UPSTREAM_PUBLIC_CONFIG_API" in text or "UPSTREAM_PUBLIC_SETTINGS_API" in text
+    assert "env.DB" in text
+    assert "site_settings" in text
+    assert "price_adjustments" in text
+    assert "UPSTREAM_PUBLIC_CONFIG_API" not in config
     assert 'request.method !== "GET"' in text
     assert "POST" not in config and "PUT" not in config and "DELETE" not in config
 
 
 if __name__ == "__main__":
     test_staging_frontend_has_no_direct_external_backend_dependencies()
-    test_staging_worker_proxies_public_config_without_write_routes()
+    test_staging_worker_reads_public_config_from_d1_without_write_routes()

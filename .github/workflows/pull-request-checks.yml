@@ -35,6 +35,7 @@ jobs:
           python3 tests/test_frontend_dependency_boundary.py
           python3 tests/test_footer_contact_link.py
           python3 tests/test_gold_provider_contract.py
+          python3 tests/test_sabaaek_admin_authorization_contract.py
           python3 tests/test_worker_read_latency_contract.py
           python3 tests/test_initial_history_request_dedup.py
           python3 tests/test_price_render_independent_of_adjustment_latency.py

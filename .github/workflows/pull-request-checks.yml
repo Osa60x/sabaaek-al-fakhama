@@ -1,0 +1,49 @@
+name: Pull request checks
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  static-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check JavaScript syntax
+        run: |
+          node --check workers/sabaaek-gold-api/src/index.js
+          node --check workers/sabaaek-gold-api/src/providers.js
+          node --check workers/sabaaek-site-staging/src/index.js
+      - name: Run deterministic contracts
+        run: |
+          python3 tests/test_staging_isolation_contract.py
+          python3 tests/test_frontend_dependency_boundary.py
+          python3 tests/test_footer_contact_link.py
+          python3 tests/test_gold_provider_contract.py
+          python3 tests/test_worker_read_latency_contract.py
+          python3 tests/test_initial_history_request_dedup.py
+          python3 tests/test_price_render_independent_of_adjustment_latency.py
+          python3 tests/test_chart_history_count_arabic_grammar.py
+          python3 tests/test_chart_range_controls_no_duplicate_label.py
+          python3 tests/test_chart_history_ranges.py
+          python3 tests/test_yearly_history_seed.py
+          python3 tests/test_theme_bootstrap.py
+      - name: Verify release contracts
+        run: python3 tests/check_release_contracts.py
+      - name: Check whitespace
+        run: git diff --check

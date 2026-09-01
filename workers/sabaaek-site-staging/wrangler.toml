@@ -9,3 +9,4 @@ not_found_handling = "single-page-application"
 
 [vars]
 UPSTREAM_PUBLIC_API = "https://sabaaek-gold-api.osa60x.workers.dev"
+UPSTREAM_PUBLIC_CONFIG_API = "https://onlptehmvnzzbxswkcrh.supabase.co/functions/v1/sabaaek-admin"

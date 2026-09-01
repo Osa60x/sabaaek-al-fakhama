@@ -1,4 +1,8 @@
 const PUBLIC_API_PATHS = new Set(["/quote", "/history"]);
+const PUBLIC_CONFIG_PATHS = new Map([
+  ["/public-settings", "public-settings"],
+  ["/public-adjustments", "public-adjustments"],
+]);
 
 export default {
   async fetch(request, env) {
@@ -17,13 +21,14 @@ export default {
       }
 
       const upstreamPath = url.pathname.slice("/api".length);
-      if (!PUBLIC_API_PATHS.has(upstreamPath)) {
+      const configAction = PUBLIC_CONFIG_PATHS.get(upstreamPath);
+      if (!PUBLIC_API_PATHS.has(upstreamPath) && !configAction) {
         return new Response("Not Found", { status: 404 });
       }
 
-      const upstream = new URL(env.UPSTREAM_PUBLIC_API);
-      upstream.pathname = upstreamPath;
-      upstream.search = url.search;
+      const upstream = new URL(configAction ? env.UPSTREAM_PUBLIC_CONFIG_API : env.UPSTREAM_PUBLIC_API);
+      upstream.pathname = configAction ? upstream.pathname : upstreamPath;
+      upstream.search = configAction ? `?action=${encodeURIComponent(configAction)}` : url.search;
       const response = await fetch(new Request(upstream, { method: "GET" }));
       const headers = new Headers(response.headers);
       headers.set("Cache-Control", "no-store");

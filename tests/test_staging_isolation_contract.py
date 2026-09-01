@@ -34,6 +34,9 @@ def test_staging_worker_allows_only_read_proxy_methods():
     assert "POST" not in worker
     assert "PUT" not in worker
     assert "DELETE" not in worker
+    assert "Content-Security-Policy" in worker
+    assert "X-Content-Type-Options" in worker
+    assert "Referrer-Policy" in worker
 
 
 if __name__ == "__main__":

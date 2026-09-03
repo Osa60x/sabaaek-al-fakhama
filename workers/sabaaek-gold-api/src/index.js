@@ -1,3 +1,5 @@
+import { createGoldProvider } from "./providers.js";
+
 const PRIMARY_URL = "https://api.gold-api.com/price/XAU/USD";
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
@@ -123,17 +125,13 @@ function validateQuote(raw, previous) {
   };
 }
 
-async function fetchPrimary(previous) {
+async function fetchProvider(provider, previous) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5000);
   try {
-    const response = await fetch(PRIMARY_URL, {
-      headers: { Accept: "application/json" },
-      signal: controller.signal,
-      cf: { cacheTtl: 0 },
-    });
-    if (!response.ok) throw new Error(`source_${response.status}`);
-    return validateQuote(await response.json(), previous);
+    const raw = await provider.getSpotPrice({ signal: controller.signal });
+    const quote = validateQuote(raw, previous);
+    return { ...quote, source: provider.getSource(raw), status: provider.getStatus(raw) };
   } finally {
     clearTimeout(timeout);
   }
@@ -180,7 +178,7 @@ async function persistQuote(env, quote) {
 }
 
 async function recordQuote(env, previous) {
-  const quote = await fetchPrimary(previous);
+  const quote = await fetchProvider(createGoldProvider(env), previous);
   await persistQuote(env, quote);
   return quote;
 }

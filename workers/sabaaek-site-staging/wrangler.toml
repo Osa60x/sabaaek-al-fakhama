@@ -1,0 +1,17 @@
+name = "sabaaek-site-staging"
+main = "src/index.js"
+compatibility_date = "2026-08-16"
+compatibility_flags = ["global_fetch_strictly_public"]
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = true
+
+[vars]
+UPSTREAM_PUBLIC_API = "https://sabaaek-gold-api.osa60x.workers.dev"
+[[d1_databases]]
+binding = "DB"
+database_name = "sabaaek_gold_staging"
+database_id = "d5345360-d46f-46cf-836c-9ed3c3ec92b9"

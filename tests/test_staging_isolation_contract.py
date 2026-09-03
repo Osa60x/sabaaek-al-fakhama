@@ -32,9 +32,11 @@ def test_staging_worker_allows_only_read_proxy_methods():
     assert re.search(r"method\s*!==\s*[\"']GET[\"']", worker)
     config = CONFIG.read_text(encoding="utf-8")
     assert "sabaaek-gold-api.osa60x.workers.dev" in config
-    assert "POST" not in worker
-    assert "PUT" not in worker
-    assert "DELETE" not in worker
+    assert 'if (url.pathname.startsWith("/api/"))' in worker
+    assert 'if (request.method !== "GET")' in worker
+    assert 'url.pathname === "/auth/login" && request.method === "POST"' in worker
+    assert 'url.pathname === "/admin/price-adjustments" && request.method === "PUT"' in worker
+    assert 'url.pathname.startsWith("/admin/")' in worker
     assert "Content-Security-Policy" in worker
     assert "X-Content-Type-Options" in worker
     assert "Referrer-Policy" in worker

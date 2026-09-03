@@ -82,6 +82,19 @@ function csrfCookie(value, maxAge) {
 function validEmail(email) { return /^\S+@\S+\.\S+$/.test(email) && email.length <= 254; }
 function validPassword(password) { return typeof password === "string" && password.length >= 12 && password.length <= 256; }
 function validRole(role) { return role === "owner" || role === "manager"; }
+function validContactActions(actions) {
+  if (!Array.isArray(actions) || actions.length > 6) return false;
+  return actions.every((action) => {
+    if (!action || !["whatsapp", "phone", "address", "website"].includes(String(action.kind))) return false;
+    if (typeof action.label !== "string" || action.label.trim().length < 1 || action.label.length > 80 || /[<>]/.test(action.label)) return false;
+    if (typeof action.value !== "string" || action.value.length > 254 || /[<>]/.test(action.value)) return false;
+    if (["whatsapp", "phone"].includes(action.kind) && !/^[0-9+ ()-]{7,24}$/.test(action.value)) return false;
+    if (action.kind === "website") {
+      try { const value = new URL(action.value); if (!["http:", "https:"].includes(value.protocol)) return false; } catch { return false; }
+    }
+    return true;
+  });
+}
 
 function originAllowed(request) {
   const origin = request.headers.get("Origin");
@@ -265,6 +278,7 @@ async function adminRoute(request, env, url) {
     if (!body || !["theme", "contact_actions"].some((key) => key in body)) return json({ error: "invalid_settings" }, 400);
     const allowedThemes = new Set(["emerald_classic", "obsidian_glass", "ivory_luxe"]);
     if (body.theme !== undefined && !allowedThemes.has(String(body.theme))) return json({ error: "invalid_theme" }, 400);
+    if (body.contact_actions !== undefined && !validContactActions(body.contact_actions)) return json({ error: "invalid_contact_actions" }, 400);
     const updatedAt = nowIso();
     const statements = [];
     if (body.theme !== undefined) statements.push(env.DB.prepare("UPDATE site_settings SET value_json = ?, updated_at = ? WHERE key = 'theme'").bind(JSON.stringify(body.theme), updatedAt));
@@ -306,6 +320,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     try {
+      if (url.pathname.startsWith("/__security/")) return json({ error: "not_found" }, 404);
       const authResponse = await authRoute(request, env, url);
       if (authResponse) return withSecurityHeaders(authResponse);
       if (url.pathname.startsWith("/admin/")) {

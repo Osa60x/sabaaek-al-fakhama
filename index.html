@@ -5,8 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#071312" />
   <meta name="description" content="لوحة أسعار الذهب العالمية وعيارات 24 و21 و18 من سبائك الفخامة." />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="ar_SA" />
+  <meta property="og:site_name" content="سبائك الفخامة" />
   <meta property="og:title" content="سبائك الفخامة | أسعار الذهب" />
   <meta property="og:description" content="سعر الأونصة وعيارات الذهب المحسوبة من بيانات سوق متحققة." />
+  <meta property="og:image" content="https://osa60x.github.io/sabaaek-al-fakhama/assets/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="لوحة أسعار الذهب — سبائك الفخامة" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="canonical" href="https://osa60x.github.io/sabaaek-al-fakhama/" />
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="سبائك الفخامة" />
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <link rel="icon" type="image/png" href="assets/icon-192.png" sizes="192x192" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
   <title>سبائك الفخامة | أسعار الذهب</title>
   <style>
     html[data-theme-pending]{background:#08090d}html[data-theme-pending] body{visibility:hidden}html[data-theme-bootstrap="emerald_classic"] body{background:#071312}html[data-theme-bootstrap="obsidian_glass"] body{background:#08090d}html[data-theme-bootstrap="ivory_luxe"] body{background:#f5eedf}
@@ -168,6 +186,16 @@
     function updateRangeControls(){document.querySelectorAll('#chart-ranges .chart-range').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.range===activeHistoryRange)));const meta=HISTORY_RANGES[activeHistoryRange]||HISTORY_RANGES['24h'];set('#range-label',meta.label)}function historyCountText(count,range){if(range==='24h')return `${count} ${count===1||count>10?'نقطة فعلية':'نقاط فعلية'} محفوظة`;const daily=range==='30d',singular=daily?'ملخص يومي محفوظ':'ملخص شهري محفوظ',dual=daily?'ملخصان يوميان محفوظان':'ملخصان شهريان محفوظان',plural=daily?'ملخصات يومية محفوظة':'ملخصات شهرية محفوظة',many=daily?'ملخصاً يومياً محفوظاً':'ملخصاً شهرياً محفوظاً';return count===1?singular:count===2?dual:count<=10?`${count} ${plural}`:`${count} ${many}`}function setHistoryRange(range){if(!HISTORY_RANGES[range])return;activeHistoryRange=range;updateRangeControls();void loadHistory(range)}async function loadHistory(range=activeHistoryRange){if(!WORKER_API)return;const meta=HISTORY_RANGES[range]||HISTORY_RANGES['24h'],requestId=++historyRequestId;activeHistoryRange=range;updateRangeControls();set('#chart-title',meta.title);set('#chart-source','جارٍ تحميل السجل المحفوظ');try{const h=await fetchJSON(`${WORKER_API.replace(/\/$/,'')}/history?range=${encodeURIComponent(range)}`);if(requestId!==historyRequestId)return;const points=(h?.points||[]).map(p=>({price:Number(p.price),high:Number(p.high),low:Number(p.low),sourceUpdatedAt:Number(p.ts)})).filter(p=>Number.isFinite(p.price)&&Number.isFinite(p.sourceUpdatedAt));const gapThresholdMs=Number(h?.gap_threshold_ms);set('#chart-title',meta.title);set('#chart-source',points.length?historyCountText(points.length,range):'بانتظار أول ملخصين حقيقيين');drawChart(points,{range,gapThresholdMs:Number.isFinite(gapThresholdMs)&&gapThresholdMs>0?gapThresholdMs:meta.gap})}catch{if(requestId!==historyRequestId)return;set('#chart-title',meta.title);set('#chart-source','تعذر قراءة السجل المحفوظ حالياً');drawChart([],{range,gapThresholdMs:meta.gap})}}
     function share(){const q=accepted;if(!q){toast('لا توجد قراءة صالحة لمشاركتها بعد');return}const text=`سبائك الفخامة\nسعر الأونصة: ${money(q.price)} $\nعيار 24: ${$('#k24').textContent} ⃁ / جرام\nعيار 21: ${$('#k21').textContent} ⃁ / جرام\nعيار 18: ${$('#k18').textContent} ⃁ / جرام\nوقت المصدر: ${time(q.sourceUpdatedAt)}\n${location.href}`;if(navigator.share)navigator.share({title:'سبائك الفخامة',text}).then(()=>toast('تمت المشاركة')).catch(()=>{});else if(navigator.clipboard)navigator.clipboard.writeText(text).then(()=>toast('تم نسخ تفاصيل السعر')).catch(()=>toast('تعذر نسخ تفاصيل السعر'));else toast('المشاركة غير متاحة في هذا المتصفح')}
     $('#refresh').addEventListener('click',()=>refresh(true));$('#share').addEventListener('click',share);$('#chart-ranges').addEventListener('click',event=>{const button=event.target.closest('button[data-range]');if(button)setHistoryRange(button.dataset.range)});$('#chart-wrap').addEventListener('pointermove',showTooltip);$('#chart-wrap').addEventListener('pointerleave',hideTooltip);$('#chart-wrap').addEventListener('pointerdown',showTooltip);window.addEventListener('online',()=>refresh(true));window.addEventListener('focus',()=>refresh(true));document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh(true)});renderBusinessActions([{kind:'whatsapp',label:'تواصل عبر واتساب',value:'966550441259'}]);void loadPublicSettings();refresh();refreshTimer=setInterval(()=>{if(!document.hidden)refresh(true)},REFRESH_MS);loadHistory();
+    // PWA: تسجيل Service Worker
+    if('serviceWorker' in navigator){
+      window.addEventListener('load',()=>{
+        navigator.serviceWorker.register('./sw.js').then(reg=>{
+          console.log('SW registered', reg.scope);
+        }).catch(err=>{
+          console.warn('SW registration failed', err);
+        });
+      });
+    }
   </script>
 </body>
 </html>
